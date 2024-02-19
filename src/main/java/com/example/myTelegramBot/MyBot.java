@@ -12,6 +12,8 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.util.Optional;
+
 //my telegram bot
 @Component
 @Slf4j
@@ -34,18 +36,30 @@ public class MyBot extends TelegramLongPollingBot {
         }
     }
 
+    private void gameMenu(Update update, String message, Long chatId){
+        if(message.startsWith("/menu")){
+            sendMessage(chatId, "недаделаный плюш ТК, цена: 50\n" +
+                    "аптека первой помощи, цена: 20\n" +
+                    "маркер, цена: 4");
+        }
+    }
+
     private void registerUser(Update update, String text) {
         String[] words = text.split(" ");
         String emeil = words[1];
         Long chatId = update.getMessage().getChatId();
-        String username = update.getMessage().getFrom().getUserName();
-        userServiceimpl.save(
-                User.builder()
-                        .chatId(chatId)
-                        .username(username)
-                        .email(emeil)
-                        .build()
-        );
+        if(!isUserExist(chatId)){
+            String username = update.getMessage().getFrom().getUserName();
+            userServiceimpl.save(
+                    User.builder()
+                            .chatId(chatId)
+                            .username(username)
+                            .email(emeil)
+                            .build()
+            );
+        }else {
+            sendMessage(chatId, "Вы уже зарегестриривоини");
+        }
 
     }
 
@@ -57,6 +71,16 @@ public class MyBot extends TelegramLongPollingBot {
             execute(sendMessage);
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+
+    private boolean isUserExist(Long id){
+        Optional<User> userById = userServiceimpl.findUserByChatId(id);
+        if(userById.isEmpty()){
+            return false;
+        }else {
+            return true;
         }
     }
 
