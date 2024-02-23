@@ -1,17 +1,24 @@
 package com.example.myTelegramBot;
 
 import com.example.myTelegramBot.config.BotConfig;
+import com.example.myTelegramBot.domain.Product;
 import com.example.myTelegramBot.domain.User;
 import com.example.myTelegramBot.service.UserService;
+import com.example.myTelegramBot.service.serviceImpl.ProductServiceImpl;
 import com.example.myTelegramBot.service.serviceImpl.UserServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboard;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import javax.security.auth.callback.Callback;
 import java.util.*;
 
 //my telegram bot
@@ -22,14 +29,17 @@ public class MyBot extends TelegramLongPollingBot {
     private BotConfig botConfig;
     private UserServiceImpl userServiceimpl;
 
-    private Map<String, Integer> products = new HashMap<>();
+    private ProductServiceImpl productService;
 
 
     @Autowired
-    public MyBot(BotConfig botConfig, UserServiceImpl userServiceimpl) {
+    public MyBot(BotConfig botConfig, UserServiceImpl userServiceimpl, ProductServiceImpl productService) {
         this.botConfig = botConfig;
         this.userServiceimpl = userServiceimpl;
+        this.productService = productService;
     }
+
+
 
     @Override
     public void onUpdateReceived(Update update) {
@@ -45,49 +55,72 @@ public class MyBot extends TelegramLongPollingBot {
                 startMenu(chatId);
             }else if (msg.startsWith("/buy")){
                 cart(chatId, msg);
+            }else if(msg.startsWith("/hi")){
+                try {
+                    execute(
+                            SendMessage.builder().chatId(chatId).text("Привет").
+                                    replyMarkup(createHiKeyboard()).build()
+                    );
+                } catch (TelegramApiException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
+        if (update.hasCallbackQuery()){
+            CallbackQuery callbackQuery = update.getCallbackQuery();
+            if (callbackQuery.getData().equalsIgnoreCase("hi")){
+                sendMessage(callbackQuery.getFrom().getId(), "ok");
+            }
+        }
+    }
+
+    private InlineKeyboardMarkup createHiKeyboard() {
+        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
+        keyboardMarkup.setKeyboard(new ArrayList<>());
+        InlineKeyboardButton hiButton = new InlineKeyboardButton();
+        hiButton.setText("hi");
+        hiButton.setCallbackData("hi");
+
+        InlineKeyboardButton byeButton = new InlineKeyboardButton();
+        byeButton.setText("bye");
+        byeButton.setCallbackData("bye");
+
+        List<InlineKeyboardButton> row1 = new ArrayList<>();
+        row1.add(hiButton);
+        row1.add(byeButton);
+
+        keyboardMarkup.getKeyboard().add(row1);
+
+        return keyboardMarkup;
     }
 
     private void startMenu(Long chatId){
         sendMessage(chatId, "Добро пожаловать в моего первого бота!\n" +
                 "команды: \n" +
                 "/reg - позволает зарегестрироватся\n" +
-                "/menu - будущие меню покупок\n +" +
+                "/menu - меню покупок\n " +
                 "/buy - добавить в корзину");
     }
 
-
-    List<String> cart = new ArrayList<>();
+    List<Product> cart = new ArrayList<>();
 
     private void cart(Long chatId, String msg){
-        List<String> productsFromMap = new ArrayList<>();
-        products.put("недаделаный плюш ТК", 50);
-        products.put("аптека первой помощи", 20);
-        products.put("маркер", 4);
-        for (Map.Entry<String, Integer> entry : products.entrySet()){
-            productsFromMap.add(entry.getKey());
-        }
+        List<Product> productsFromMap = productService.readAll();
         Integer id = Integer.valueOf(msg.split(" ")[1]);
-        String product = productsFromMap.get(id - 1);
+        Product product = productsFromMap.get(id - 1);
         cart.add(product);
-        //products.entrySet().stream()
-              //  .filter(p -> p.getKey().equalsIgnoreCase(product));
         System.out.println(cart);
         sendMessage(chatId, cart.toString());
     }
 
     private void productMenu( Long chatId){
-        products.put("недаделаный плюш ТК", 50);
-        products.put("аптека первой помощи", 20);
-        products.put("маркер", 4);
-
+        List<Product> products = productService.readAll();
         StringBuilder menuText = new StringBuilder("Выберите товар для покупки\n\n");
         int index = 1;
-        for (Map.Entry<String, Integer> entry : products.entrySet()){
+        for (Product p: products){
             menuText.append(index).
-                    append(". ").append(entry.getKey()).
-                    append(" цена: ").append(entry.getValue()).append("\n");
+                    append(". ").append(p.getName()).
+                    append(" цена: ").append(p.getPrice()).append("\n");
             index++;
         }
         sendMessage(chatId, menuText.toString());
