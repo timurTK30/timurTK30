@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 
 @Service
@@ -34,7 +35,7 @@ public class UserServiceImpl implements UserService {
         if (id != null) {
             user.setId(id);
             return userRepository.save(user);
-        }else {
+        } else {
             throw new RuntimeException("user not found with id: " + id + ".");
         }
     }
@@ -43,4 +44,11 @@ public class UserServiceImpl implements UserService {
     public void deleteById(Long id) {
         userRepository.deleteById(id);
     }
+
+    @Override
+    public Optional<User> findUserByChatId(Long id) {
+        return Optional.ofNullable(userRepository.findUserByChatId(id));
+    }
+
+
 }
