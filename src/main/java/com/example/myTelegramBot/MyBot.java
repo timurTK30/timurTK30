@@ -53,52 +53,36 @@ public class MyBot extends TelegramLongPollingBot {
             } else if (msg.startsWith("/buy")) {
                 cart(chatId, msg);
             } else if (msg.startsWith("/hi")) {
-                sendMassageToUser(chatId, msg, List.of("hi", "bye", "hahah"));
+                sendMessage(chatId, msg, List.of("hi", "bye", "hahah"));
             }
         }
         if (update.hasCallbackQuery()) {
             CallbackQuery callbackQuery = update.getCallbackQuery();
             if (callbackQuery.getData().equalsIgnoreCase("hi")) {
-                sendMessage(callbackQuery.getMessage().getChatId(), "ok");
+                sendMessage(callbackQuery.getMessage().getChatId(), "ok", null);
             }
         }
     }
 
-    private InlineKeyboardMarkup createHiKeyboard() {
+
+
+    private InlineKeyboardMarkup createCustomKeyboard(List<String> buttonText, int buttonsRow) {
         InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
-        keyboardMarkup.setKeyboard(new ArrayList<>());
-        InlineKeyboardButton hiButton = new InlineKeyboardButton();
-        hiButton.setText("hi");
-        hiButton.setCallbackData("hi");
-
-        InlineKeyboardButton byeButton = new InlineKeyboardButton();
-        byeButton.setText("bye");
-        byeButton.setCallbackData("bye");
-
-        List<InlineKeyboardButton> row1 = new ArrayList<>();
-        row1.add(hiButton);
-        row1.add(byeButton);
-
-        keyboardMarkup.getKeyboard().add(row1);
-
-        return keyboardMarkup;
-    }
-
-    private InlineKeyboardMarkup createCustomKeyboard(List<String> buttons) {
-        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> keyBoard = new ArrayList<>();
-        for (String s : buttons) {
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        List<InlineKeyboardButton> row = new ArrayList<>();
+        for (String s : buttonText) {
             InlineKeyboardButton button = new InlineKeyboardButton();
             button.setText(s);
             button.setCallbackData(s);
 
-            List<InlineKeyboardButton> row1 = new ArrayList<>();
-            row1.add(button);
-
-            keyBoard.add(row1);
+            row.add(button);
+            if (row.size() == buttonsRow || button.equals(buttonText.get(buttonText.size() -1))){
+                rows.add(row);
+               // row = new ArrayList<>();
+            }
         }
 
-        keyboardMarkup.setKeyboard(keyBoard);
+        keyboardMarkup.setKeyboard(rows);
 
         return keyboardMarkup;
     }
@@ -149,7 +133,7 @@ public class MyBot extends TelegramLongPollingBot {
         } else {
             sendMessage(chatId, "Вы уже зарегестриривоини", null);
         }
-
+    }
 
     private void sendMessage(Long chatId, String msg, List<String> buttons) {
         SendMessage sendMessage = new SendMessage();
@@ -157,7 +141,7 @@ public class MyBot extends TelegramLongPollingBot {
         sendMessage.setText(msg);
 
         if (buttons != null) {
-            InlineKeyboardMarkup keyboardMarkup = createCustomKeyboard(buttons);
+            InlineKeyboardMarkup keyboardMarkup = createCustomKeyboard(buttons, 2);
             sendMessage.setReplyMarkup(keyboardMarkup);
         }
 
